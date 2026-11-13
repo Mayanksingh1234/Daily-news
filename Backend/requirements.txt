@@ -1,4 +1,9 @@
-fastapi 
-uvicorn 
-python-dotenv 
+fastapi
+uvicorn
+python-dotenv
 pydantic
+supabase
+tavily-python
+google-genai
+requests
+apscheduler

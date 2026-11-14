@@ -1,15 +1,14 @@
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.services.background_jobs import (
     check_scheduled_briefings,
 )
 
 
-scheduler = AsyncIOScheduler()
+scheduler = BackgroundScheduler()
 
 
 def start_scheduler():
-
     scheduler.add_job(
         check_scheduled_briefings,
         "interval",
@@ -17,6 +16,7 @@ def start_scheduler():
         id="briefing_scheduler",
         replace_existing=True,
         max_instances=1,
+        coalesce=True,
     )
 
     scheduler.start()
@@ -27,7 +27,6 @@ def start_scheduler():
 
 
 def stop_scheduler():
-
     scheduler.shutdown(
         wait=False
     )

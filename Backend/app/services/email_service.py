@@ -43,8 +43,11 @@ class EmailService:
             """
         )
 
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
+        with smtplib.SMTP_SSL(
+            "smtp.gmail.com",
+            465,
+            timeout=30,
+        ) as server:
             server.login(
                 self.email,
                 self.app_password,

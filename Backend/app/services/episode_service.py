@@ -3,11 +3,39 @@ from app.database import supabase
 from app.services.script_generator import ScriptGenerator
 from app.services.tts_service import GnaniTTS
 from app.config import SUPABASE_AUDIO_BUCKET
+from app.services.email_service import EmailService
 
 
 research_agent = ResearchAgent()
 script_generator = ScriptGenerator()
 tts_service = GnaniTTS()
+email_service = EmailService()
+
+
+def get_user_email(user_id: str) -> str:
+    """
+    Retrieve the user's email from Supabase Auth.
+    """
+
+    response = (
+        supabase.auth.admin.get_user_by_id(
+            user_id
+        )
+    )
+
+    if not response or not response.user:
+        raise Exception(
+            "Unable to retrieve user information"
+        )
+
+    email = response.user.email
+
+    if not email:
+        raise Exception(
+            "User does not have an email address"
+        )
+
+    return email
 
 
 def generate_episode(
@@ -16,8 +44,48 @@ def generate_episode(
     topic: str,
 ):
     try:
+
         # -----------------------------------------
-        # 1. Mark episode as researching
+        # 1. Get episode/user information
+        # -----------------------------------------
+
+        episode_response = (
+            supabase
+            .table("episodes")
+            .select("user_id, title")
+            .eq("id", episode_id)
+            .single()
+            .execute()
+        )
+
+        episode = episode_response.data
+
+        if not episode:
+            raise Exception(
+                "Episode not found"
+            )
+
+        user_id = episode["user_id"]
+
+        title = (
+            episode.get("title")
+            or topic
+        )
+
+        # -----------------------------------------
+        # 2. Get user email
+        # -----------------------------------------
+
+        user_email = get_user_email(
+            user_id
+        )
+
+        print(
+            f"[EMAIL] User email: {user_email}"
+        )
+
+        # -----------------------------------------
+        # 3. Mark episode as researching
         # -----------------------------------------
 
         supabase.table("episodes").update({
@@ -28,10 +96,12 @@ def generate_episode(
         ).execute()
 
         # -----------------------------------------
-        # 2. Research topic
+        # 4. Research topic
         # -----------------------------------------
 
-        sources = research_agent.research(topic)
+        sources = research_agent.research(
+            topic
+        )
 
         if not sources:
             raise Exception(
@@ -39,7 +109,7 @@ def generate_episode(
             )
 
         # -----------------------------------------
-        # 3. Save sources
+        # 5. Save sources
         # -----------------------------------------
 
         source_rows = []
@@ -55,12 +125,15 @@ def generate_episode(
             })
 
         if source_rows:
-            supabase.table("sources").insert(
-                source_rows
-            ).execute()
+            (
+                supabase
+                .table("sources")
+                .insert(source_rows)
+                .execute()
+            )
 
         # -----------------------------------------
-        # 4. Generate podcast script
+        # 6. Generate podcast script
         # -----------------------------------------
 
         supabase.table("episodes").update({
@@ -74,8 +147,16 @@ def generate_episode(
             topic=topic,
             sources=sources,
         )
-        print(f"Script length: {len(script)} characters")
-        print(f"Script words: {len(script.split())} words")
+
+        print(
+            f"Script length: "
+            f"{len(script)} characters"
+        )
+
+        print(
+            f"Script words: "
+            f"{len(script.split())} words"
+        )
 
         if not script:
             raise Exception(
@@ -83,7 +164,7 @@ def generate_episode(
             )
 
         # -----------------------------------------
-        # 5. Save script
+        # 7. Save script
         # -----------------------------------------
 
         supabase.table("episodes").update({
@@ -94,7 +175,7 @@ def generate_episode(
         ).execute()
 
         # -----------------------------------------
-        # 6. Generate audio
+        # 8. Generate audio
         # -----------------------------------------
 
         supabase.table("episodes").update({
@@ -114,48 +195,93 @@ def generate_episode(
             )
 
         # -----------------------------------------
-        # 7. Upload audio to Supabase Storage
+        # 9. Upload audio
         # -----------------------------------------
 
         storage_path = (
             f"{episode_id}.wav"
         )
 
-        supabase.storage.from_(
-            SUPABASE_AUDIO_BUCKET
-        ).upload(
-            storage_path,
-            audio_bytes,
-            {
-                "content-type": "audio/wav",
-                "upsert": "true",
-            },
+        (
+            supabase
+            .storage
+            .from_(SUPABASE_AUDIO_BUCKET)
+            .upload(
+                storage_path,
+                audio_bytes,
+                {
+                    "content-type": "audio/wav",
+                    "upsert": "true",
+                },
+            )
         )
 
         # -----------------------------------------
-        # 8. Get public audio URL
+        # 10. Get public audio URL
         # -----------------------------------------
 
         audio_url = (
-            supabase.storage
+            supabase
+            .storage
             .from_(SUPABASE_AUDIO_BUCKET)
-            .get_public_url(storage_path)
+            .get_public_url(
+                storage_path
+            )
         )
 
         # -----------------------------------------
-        # 9. Mark episode ready
+        # 11. Mark episode ready
         # -----------------------------------------
 
-        supabase.table("episodes").update({
-            "audio_url": audio_url,
-            "status": "ready",
-        }).eq(
-            "id",
-            episode_id
-        ).execute()
+        (
+            supabase
+            .table("episodes")
+            .update({
+                "audio_url": audio_url,
+                "status": "ready",
+            })
+            .eq(
+                "id",
+                episode_id
+            )
+            .execute()
+        )
+
+        print(
+            f"[EPISODE] Episode ready: "
+            f"{episode_id}"
+        )
 
         # -----------------------------------------
-        # 10. Return completed episode
+        # 12. Send email
+        # -----------------------------------------
+
+        try:
+
+            email_service.send_episode_email(
+                to_email=user_email,
+                title=title,
+                audio_url=audio_url,
+            )
+
+            print(
+                f"[EMAIL] Email sent successfully "
+                f"to {user_email}"
+            )
+
+        except Exception as email_error:
+
+            # Email failure should NOT make
+            # the successfully generated
+            # episode fail.
+
+            print(
+                f"[EMAIL ERROR] "
+                f"{email_error}"
+            )
+
+        # -----------------------------------------
+        # 13. Return completed episode
         # -----------------------------------------
 
         return {

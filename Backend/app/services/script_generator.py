@@ -60,7 +60,7 @@ Research:
 STRICT REQUIREMENTS:
 
 1. The final script must be between
-   800 and 1000 words.
+   700 and 900 words.
 
 2. Focus only on the most important
    information from the research.

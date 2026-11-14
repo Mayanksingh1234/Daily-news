@@ -20,7 +20,7 @@ class GnaniTTS:
             "model": "timbre-v2.5",
             "voice": "Kaveri",
             "language": "en-IN",
-            "speed": 1.0,
+            "speed": 0.9,
             "audio_config": {
                 "sample_rate": 48000,
                 "num_channels": 1,

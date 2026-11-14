@@ -26,14 +26,8 @@ SUPABASE_AUDIO_BUCKET = os.getenv(
     "episodes"
 )
 
-RESEND_API_KEY = os.getenv(
-    "RESEND_API_KEY"
-)
 
-RESEND_FROM_EMAIL = os.getenv(
-    "RESEND_FROM_EMAIL",
-    "onboarding@resend.dev"
-)
+
 
 
 if not SUPABASE_URL:
@@ -59,9 +53,4 @@ if not GEMINI_API_KEY:
 if not GNANI_API_KEY:
     raise RuntimeError(
         "GNANI_API_KEY is not configured"
-    )
-
-if not RESEND_API_KEY:
-    raise RuntimeError(
-        "RESEND_API_KEY is not configured"
     )

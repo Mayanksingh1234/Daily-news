@@ -35,7 +35,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://daily-news-1-xute.onrender.com/",
+        "https://daily-news-1-xute.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],

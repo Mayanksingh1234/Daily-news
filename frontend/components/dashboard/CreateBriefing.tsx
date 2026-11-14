@@ -1,6 +1,11 @@
 "use client";
 
-import { memo, FormEvent, useState } from "react";
+import {
+  FormEvent,
+  memo,
+  useState,
+} from "react";
+
 import { apiRequest } from "@/lib/api";
 
 interface CreateBriefingProps {
@@ -11,41 +16,67 @@ function CreateBriefing({
   onCreated,
 }: CreateBriefingProps) {
   const [topic, setTopic] = useState("");
-  const [time, setTime] = useState("");
+
+  const [hour, setHour] = useState("08");
+  const [minute, setMinute] = useState("00");
+  const [period, setPeriod] = useState("AM");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const handleSubmit = async (
-    e: FormEvent<HTMLFormElement>
+    event: FormEvent
   ) => {
-    e.preventDefault();
+    event.preventDefault();
 
     setError("");
     setSuccess("");
 
-    if (!topic.trim() || !time) {
-      setError(
-        "Please enter a topic and select a time."
-      );
+    if (!topic.trim()) {
+      setError("Please enter a research topic.");
       return;
     }
 
-    setLoading(true);
+    // Convert 12-hour time to 24-hour time
+    let hour24 = Number(hour);
+
+    if (period === "AM") {
+      if (hour24 === 12) {
+        hour24 = 0;
+      }
+    } else {
+      if (hour24 !== 12) {
+        hour24 += 12;
+      }
+    }
+
+    const scheduledTime = `${String(hour24).padStart(
+      2,
+      "0"
+    )}:${minute}:00`;
 
     try {
+      setLoading(true);
+
       await apiRequest("/briefings", {
         method: "POST",
+
         body: JSON.stringify({
           topic: topic.trim(),
-          scheduled_time: `${time}:00`,
+          scheduled_time: scheduledTime,
           timezone: "Asia/Kolkata",
         }),
       });
 
       setTopic("");
-      setTime("");
-      setSuccess("Briefing created successfully.");
+      setHour("08");
+      setMinute("00");
+      setPeriod("AM");
+
+      setSuccess(
+        "Briefing created successfully."
+      );
 
       onCreated();
     } catch (error) {
@@ -60,80 +91,154 @@ function CreateBriefing({
   };
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Create a briefing
-        </h2>
+    <section className="mb-8 rounded-xl border bg-white p-6 shadow-sm">
+      <div className="mb-5">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Create Daily Briefing
+        </h3>
 
         <p className="mt-1 text-sm text-gray-500">
-          Choose a research topic and the time you want
-          your daily podcast.
+          Choose a topic and the time you want your
+          daily podcast generated.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5"
+        className="space-y-4"
       >
-        {/* Topic */}
+        {/* Research Topic */}
+
         <div>
-          <label
-            htmlFor="topic"
-            className="mb-2 block text-sm font-medium text-gray-700"
-          >
-            Research topic
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Research Topic
           </label>
 
           <input
-            id="topic"
             type="text"
             value={topic}
-            onChange={(e) => setTopic(e.target.value)}
+            onChange={(event) =>
+              setTopic(event.target.value)
+            }
             placeholder="e.g. Startup funding announced in the last 24 hours"
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-gray-900"
           />
         </div>
 
-        {/* Time */}
+        {/* Daily Time */}
+
         <div>
-          <label
-            htmlFor="time"
-            className="mb-2 block text-sm font-medium text-gray-700"
-          >
-            Daily delivery time
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Daily Time
           </label>
 
-          <input
-            id="time"
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black sm:max-w-xs"
-          />
+          <div className="flex items-center gap-2">
+
+            {/* Hour */}
+
+            <select
+              value={hour}
+              onChange={(event) =>
+                setHour(event.target.value)
+              }
+              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-900"
+            >
+              {Array.from(
+                { length: 12 },
+                (_, index) => {
+                  const value = String(
+                    index + 1
+                  ).padStart(2, "0");
+
+                  return (
+                    <option
+                      key={value}
+                      value={value}
+                    >
+                      {value}
+                    </option>
+                  );
+                }
+              )}
+            </select>
+
+            <span className="text-lg font-medium">
+              :
+            </span>
+
+            {/* Minute */}
+
+            <select
+              value={minute}
+              onChange={(event) =>
+                setMinute(event.target.value)
+              }
+              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-900"
+            >
+              {Array.from(
+                { length: 60 },
+                (_, index) => {
+                  const value = String(
+                    index
+                  ).padStart(2, "0");
+
+                  return (
+                    <option
+                      key={value}
+                      value={value}
+                    >
+                      {value}
+                    </option>
+                  );
+                }
+              )}
+            </select>
+
+            {/* AM / PM */}
+
+            <select
+              value={period}
+              onChange={(event) =>
+                setPeriod(event.target.value)
+              }
+              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-900"
+            >
+              <option value="AM">
+                AM
+              </option>
+
+              <option value="PM">
+                PM
+              </option>
+            </select>
+
+          </div>
         </div>
 
-        {/* Error */}
+        {/* Messages */}
+
         {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+          <p className="text-sm text-red-600">
             {error}
-          </div>
+          </p>
         )}
 
-        {/* Success */}
         {success && (
-          <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-600">
+          <p className="text-sm text-green-600">
             {success}
-          </div>
+          </p>
         )}
 
         {/* Submit */}
+
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-gray-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Creating..." : "Create briefing"}
+          {loading
+            ? "Creating..."
+            : "Create Briefing"}
         </button>
       </form>
     </section>

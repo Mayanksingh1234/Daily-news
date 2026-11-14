@@ -22,9 +22,14 @@ interface EpisodeListProps {
 function EpisodeList({
   briefingId,
 }: EpisodeListProps) {
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [episodes, setEpisodes] =
+    useState<Episode[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     const fetchEpisodes = async () => {

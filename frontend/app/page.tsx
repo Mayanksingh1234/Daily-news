@@ -1,26 +1,45 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase/client";
 
+import type { RootState, AppDispatch } from "@/store/store";
+import {
+  setUser,
+  clearUser,
+} from "@/store/slices/userSlice";
+
 import Navbar from "@/components/layout/Navbar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import BriefingList from "@/components/dashboard/BriefingList";
 import CreateBriefing from "@/components/dashboard/CreateBriefing";
+import BriefingList from "@/components/dashboard/BriefingList";
 
 export default function HomePage() {
   const router = useRouter();
 
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { user, loading } = useSelector(
+    (state: RootState) => state.user
+  );
+
   const [refreshKey, setRefreshKey] = useState(0);
 
+  /*
+   * Called after a new briefing is created.
+   * This forces BriefingList to fetch the latest data.
+   */
   const handleBriefingCreated = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
+    setRefreshKey((previous) => previous + 1);
   }, []);
 
+  /*
+   * Check Supabase authentication
+   * and put the authenticated user into Redux.
+   */
   useEffect(() => {
     const checkUser = async () => {
       const {
@@ -28,17 +47,57 @@ export default function HomePage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
+        dispatch(clearUser());
         router.replace("/login");
         return;
       }
 
-      setUser(user);
-      setLoading(false);
+      dispatch(
+        setUser({
+          id: user.id,
+          email: user.email,
+          fullName:
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name,
+        })
+      );
     };
 
     checkUser();
-  }, [router]);
 
+    /*
+     * Keep Redux synchronized with Supabase Auth.
+     */
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!session?.user) {
+          dispatch(clearUser());
+          router.replace("/login");
+          return;
+        }
+
+        dispatch(
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            fullName:
+              session.user.user_metadata?.full_name ||
+              session.user.user_metadata?.name,
+          })
+        );
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [dispatch, router]);
+
+  /*
+   * Loading authentication state.
+   */
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -49,6 +108,9 @@ export default function HomePage() {
     );
   }
 
+  /*
+   * No authenticated user.
+   */
   if (!user) {
     return null;
   }
@@ -58,7 +120,10 @@ export default function HomePage() {
       <Navbar userEmail={user.email} />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <DashboardHeader userEmail={user.email} />
+
+        <DashboardHeader
+          userEmail={user.email}
+        />
 
         <CreateBriefing
           onCreated={handleBriefingCreated}
@@ -67,6 +132,7 @@ export default function HomePage() {
         <BriefingList
           refreshKey={refreshKey}
         />
+
       </main>
     </div>
   );

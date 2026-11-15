@@ -121,7 +121,7 @@ function CreateBriefing({
               setTopic(event.target.value)
             }
             placeholder="e.g. Startup funding announced in the last 24 hours"
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-gray-900"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
           />
         </div>
 
@@ -141,7 +141,7 @@ function CreateBriefing({
               onChange={(event) =>
                 setHour(event.target.value)
               }
-              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-900"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
             >
               {Array.from(
                 { length: 12 },
@@ -168,12 +168,12 @@ function CreateBriefing({
 
             {/* Minute */}
 
-            <select
+           <select
               value={minute}
               onChange={(event) =>
                 setMinute(event.target.value)
               }
-              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-900"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
             >
               {Array.from(
                 { length: 60 },
@@ -196,12 +196,12 @@ function CreateBriefing({
 
             {/* AM / PM */}
 
-            <select
+           <select
               value={period}
               onChange={(event) =>
                 setPeriod(event.target.value)
               }
-              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-900"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
             >
               <option value="AM">
                 AM
